@@ -91,3 +91,54 @@ Formating berfokus pada kerapian kode agar mudah di baca tapi tanpa mengubah log
 ```bash
     npm run format
 ```
+
+#   Controller
+Sebuah kontroler memiliki tugas sebagai penerima permintaan spesifik untuk aplikasi. Untuk membuat controller dasar, NestJS menggunakan classes dan decorators.
+Decorator akan mengasosiasikan class dengan metadata sehingga NestJS bisa membuat peta rute.
+
+##  Routing
+class dipilih karena memiliki karakter yang sejalan dengan doktrin NestJS yaitu modular dan teroganisir. Dengan class, kita bisa mendefinisikan metode yang mewakili endpoint HTTP tertentu sepert GET, POST dan lain sebagainya.
+
+Decorator sendiri adalah fitur dari TypeScript yang memungkinkan kita untuk menambahkan metadata atau perilaku tambahan pada elemen seperti class, method, property atau parameter. Itulah kenapa di NestJS controller di buat menggunakan kombinasi class dan decorator.
+
+```Typescript
+    import { Controller, Get } from '@nestjs/common';
+
+    @Controller('cats')
+    export class CatsController {
+        @Get()
+        findAll(): string {
+            return 'data cats';
+        }
+    }
+```
+
+@Controller('cats') ini akan menandai bahwa CatsController akan berperan sebagai controller dan mengatur path dasar untuk semua rute yang ada di class ini (/cats), Sementara @Get() menandai bahwa method findAll() akan menangani permintaan HTTP GET pada endpoint /cats.
+
+Jadi ketika ada request dengan metode GET pada endpoint /cats, Nest akan mencocokan permintaan HTTP yang masuk dengan cara mengidentifikasi metode HTTP apa yang masuk kemudian mencari metode yang ada di dalam class CatsController yang memiliki metadata serupa. Sehingga method findAll() di eksekusi dan mengembalikan "data cats".
+
+untuk membuat controller CRUD lengkap dengan validasi bisa menggunakan perintah `nest g resource [name]` jika hanya ingin membuat controller bisa dengan perintah `nest g controller [name]`.
+
+route path atau jalur rute di tentukan oleh beberapa hal:
+-   Controller Prefix, di definisikan oleh @Controller(). Contohnya @Controller('cats'), Maka semua yang ada di dalam memiliki prefix /cats
+-   Path Decorator, di definisikan pada method decorator. Contoh @Get('breed'), Maka metode dibawahnya akan memiliki prefix /breed
+
+Jika kedua hal tersebut di kombinasikan akan menghasilkan prefix /cats/breed
+
+NestJS menggunakan dua opsi berbeda untuk memanipulasi respon
+-   Standart
+Jika request mengebalikan objek JavaScript atau array maka secara default akan di serialisasikan ke JSON. Namun jika request mengembalikan Primitive type seperti string, number, boolean maka NestJS tidak akan melakukan serialisai dan mengembalikan data tersebut apa adanya.
+
+Default status code dari respon selalu 200, Kecuali untuk POST request akan mengembalikan 201. Namun kita dapat mengubah itu dengan cara menambahkan decorator @HttpCode() tepat dibawah decorator metode HTTP.
+
+-   Library-specific
+kita bisa menggunakan library seperti Express dengan cara menginjeksikan decorator @Res() ke method. Pendekatan ini akan memberikan kontrol lebih terhadap response, seperti setting header, cookies atau menggunakan methode tingkat langjut yang di sediakan oleh underlying HTTP library.
+
+```Typescript
+    @Get()
+    findAll(@Res() response): void {
+        response.status(200).send('This action returns all cats');
+    }
+```
+
+Meskipun menawarkan kontrol yang lebih dari respon standar, ini memiliki kelemahan karena jika kamu menggunakan @Res() maka NestJS akan menonaktifkan built-in reposne handling pada route dan kita harus mengatur hal tersebut secara keseluruhan dan secara manual.
