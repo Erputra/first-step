@@ -327,3 +327,24 @@ Sama seperti rute pada umumnya, host dapa menggunakan token untuk mendapatkan da
         }
     }
 ```
+#   Asyncronous
+Dalam bahasa Indonesia, asycronous memiliki arti "tidak sinkron". Sementara dalam pemrograman, asycncronous berarti bahawa ketika ada task yang membutuhkan waktu cukup lama untuk di proses, task tersebut tidak akan menghalangi task lain yang datang (non-blocking). Task yang berat akan di kirim atau di tangani di background task queue (event-loop) lalu di push kembali ke antrian utama setelah task selesai di proses.
+
+Jadi dengan proses seperti itu server tidak diam menunggu task yang berat di selesaikan terlebih dahulu untuk dapat memproses antrian lain, server akan tetap memproses task yang lain sembari menyelesaikan task yang berat.
+
+Sekarang kita tau bahwa proses yang di anggap berat seperti operasi setTimeout, HTTP Request, Database call, Promises, Async/Await akan di tangani di background task queue melalu event-loop. Lalu apa itu event-loop?
+
+event loop adalah mekanisme dalam JavaScript yang menghandle asyncronous operations dalam single-tread environment. Ini memastikan perilaku non-blocking dengan mendelegasikan task yang aku sebutkan tadi ke background dan akan memproses kembali ketika hasil dari task tersebut sudah tersedia.
+
+Itulah kenapa Asyncronous outputnya tidak selalu FIFO,
+
+
+Contoh:
+
+```Typescript
+    console.log('Start');
+    setTimeout(() => console.log('Async task done'), 2000); // Runs in the background
+    console.log('End');
+```
+
+hasil proses di atas adalah "start", "End" baru kemudian "Async task done", Jadi proses kedua tidak memblokade proses lain yang datang karena di proses di background baru kemudian setelah proses tersebut selesai akan di masukan kembali
