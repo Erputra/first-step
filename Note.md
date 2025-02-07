@@ -325,7 +325,7 @@ Sama seperti rute pada umumnya, host dapa menggunakan token untuk mendapatkan da
         getInfo(@HostParam('account') account: string) {
             return account;
         }
-    }
+    }w
 ```
 #   Asyncronous
 Dalam bahasa Indonesia, asycronous memiliki arti "tidak sinkron". Sementara dalam pemrograman, asycncronous berarti bahawa ketika ada task yang membutuhkan waktu cukup lama untuk di proses, task tersebut tidak akan menghalangi task lain yang datang (non-blocking). Task yang berat akan di kirim atau di tangani di background task queue (event-loop) lalu di push kembali ke antrian utama setelah task selesai di proses.
@@ -338,7 +338,6 @@ event loop adalah mekanisme dalam JavaScript yang menghandle asyncronous operati
 
 Itulah kenapa Asyncronous outputnya tidak selalu FIFO,
 
-
 Contoh:
 
 ```Typescript
@@ -347,4 +346,131 @@ Contoh:
     console.log('End');
 ```
 
-hasil proses di atas adalah "start", "End" baru kemudian "Async task done", Jadi proses kedua tidak memblokade proses lain yang datang karena di proses di background baru kemudian setelah proses tersebut selesai akan di masukan kembali
+hasil proses di atas adalah "start", "End" baru kemudian "Async task done", Jadi proses kedua tidak memblokade proses lain yang datang karena di proses di background baru kemudian setelah proses tersebut selesai akan di masukan kembali.
+
+Asycronous akan selalu terikat erat dengan Promises dan async/await, itu adalah sebuah fitur yang lahir karena munculnya beberapa masalah dengan callback function yang menyebabkan callback hell. lalu apa itu callback?
+
+callback adalah function yang dikirim sebagai argumen ke function lain dan akan dieksekusi setelah fungsi tersebut di jalankan, Jadi seperti function di dalam function. Konsep ini memungkinkan untuk menangani operasi yang bersifat asinkron seperti membaca file, mengambil data dari API atau menjalankan kode setelah proses lain.
+
+Alasan callback ada adalah karena JavaScript menggunakan single-threaded yang hanya bisa mengeksekusi satu perintah dalam satu waktu. Jika ada proses yang memakan waktu, tentu kita tidak ingin browser atau aplikasi kita terhenti karena menunggu proses tersebut selesai terlebih dahulu. Itulah kenapa callback ada.
+
+Dengan callback, kita bisa:
+1. Menjalankan kode setelah proses lain selesai tanpa memblokir eksekusi program.
+2. Membuat kode lebih fleksibel dan modular untuk memisahkan fungsi utama dan tindakan yang akan di lakukan setelahnya.
+
+Contoh dasar:
+
+    ```Javascript
+        function greet(name, callback){
+            console.log(`Hai ${name}`);
+            callback();
+        }
+
+        function sayGoodbye(){
+            console.log("Sampai Jumpa!");
+        }
+
+        greet("Rika", sayGoodbye);
+    ```
+Hasil Output:
+Hai Rika
+Sampai Jumpa!
+
+📌 Penjelasan:
+Ketika kita memanggil greet("Rika", sayGoodbye), fungsi greet akan dieksekusi.
+1. Pertama, "Hai Rika" dicetak ke konsol.
+2. Lalu, callback() dipanggil, yang sebenarnya merujuk ke fungsi sayGoodbye().
+3. Karena sayGoodbye() mencetak "Sampai Jumpa!", outputnya muncul setelah "Hai Rika".
+
+💡 Mengapa sayGoodbye() bisa tereksekusi?
+Karena fungsi greet menerima sebuah fungsi sebagai parameter kedua (callback). Dalam pemanggilan greet("Rika", sayGoodbye), parameter kedua adalah sayGoodbye, sehingga ketika callback() dipanggil dalam greet(), yang sebenarnya dijalankan adalah sayGoodbye().
+
+👉 Catatan: Kata callback bisa diganti dengan nama apa pun. Yang penting, jika sebuah fungsi menerima fungsi lain sebagai argumen dan memanggilnya nanti, itulah yang disebut sebagai callback function.
+
+Shorthand Callback
+Ada beberapa cara untuk menuliskan callback dengan lebih ringkas. 
+
+Contoh 1: Menggunakan Arrow Function
+
+    ```Javascript
+        function greet(name, call){
+            console.log(`Hai ${name}`);
+            call();
+        }
+
+        greet("Rika", () => console.log("Sampai Jumpa!"));
+    ```
+
+📌 Apa yang Berubah?
+sayGoodbye() diubah menjadi arrow function langsung dalam pemanggilan greet().
+Fungsi satu baris lebih cocok menggunakan arrow function, membuat kode lebih ringkas.
+
+🔹 Contoh 2: Callback dengan Nilai Default
+
+    ```Javascript
+        function greet(name, callback = () => console.log("Sampai Jumpa!")){
+            console.log(`Hai ${name}`);
+            callback();
+        }
+
+        greet("Rika");
+    ```
+
+📌 Apa yang Terjadi di Sini?
+Callback dibuat opsional dengan memberikan nilai default pada parameter callback.
+Jika greet dipanggil tanpa parameter kedua, maka default callback akan dijalankan secara otomatis.
+Jika ada callback yang diberikan, callback tersebut akan menggantikan default-nya.
+
+📌 Callback Sinkron vs. Asinkron.
+    Callback Sinkron adalah callback yang langsung dipanggil dalam eksekusi function utama, Tampa adanya operasi asingkron di ataranya.
+Contoh:
+
+    ```Javascript
+        function doSomething(callback) {
+            console.log("Before callback");
+            callback();
+            console.log("After callback");
+        }
+
+        doSomething(() => {
+            console.log("Inside callback");
+        });
+    ```
+Output:
+Before callback
+Inside callback
+After callback
+
+💡 Penjelasan:
+callback() langsung di eksekusi dalam doSomething() tanpa menunggu proses lain sehingga urutan ekeskusi mudah di prediksi dan tidak bergantung pada waktu.
+
+Sementara Callback Asinkron akan memanggil function nanti setelah operasi asinkron selesai, bukan langsung dalam eksekusi function utama.
+
+Contoh:
+
+    ```Javascript
+        function doSomething(callback){
+            console.log("Before setTimeout");
+            setTimeout(() => {
+                console.log("Inside callback");
+                callback();
+            }, 2000);
+            console.log("After setTImeout");
+        }
+
+        doSomething(() => {
+            console.log("Callback executed");
+        });
+    ```
+
+Output:
+Before setTimeout
+After setTImeout
+(2 detik kemudian...)
+Inside callback
+Callback executed
+
+💡 Penjelasan:
+-   setTimeout adalah fungsi asinkron sehingga callback tidak langsung dipanggil.
+-   console.log("After setTimeout") di eksekusi lebih dulu sebelum callback.
+-   Callback hanya berjalan setelah menunggu 2 detik sehingga ada jead eksekusi.
