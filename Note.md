@@ -352,7 +352,7 @@ Asycronous akan selalu terikat erat dengan Promises dan async/await, itu adalah 
 
 callback adalah function yang dikirim sebagai argumen ke function lain dan akan dieksekusi setelah fungsi tersebut di jalankan, Jadi seperti function di dalam function. Konsep ini memungkinkan untuk menangani operasi yang bersifat asinkron seperti membaca file, mengambil data dari API atau menjalankan kode setelah proses lain.
 
-Alasan callback ada adalah karena JavaScript menggunakan single-threaded yang hanya bisa mengeksekusi satu perintah dalam satu waktu. Jika ada proses yang memakan waktu, tentu kita tidak ingin browser atau aplikasi kita terhenti karena menunggu proses tersebut selesai terlebih dahulu. Itulah kenapa callback ada.
+Callback ada karena JavaScript berjalan dalam lingkungan single-threaded, yang berarti hanya dapat mengeksekusi satu tugas dalam satu waktu. Jika ada proses yang memakan waktu lama, seperti membaca file atau mengambil data dari API, kita tidak ingin eksekusi program terhenti hingga proses tersebut selesai. Oleh karena itu, callback digunakan untuk menangani tugas-tugas asinkron tanpa memblokir jalannya program.
 
 Dengan callback, kita bisa:
 1. Menjalankan kode setelah proses lain selesai tanpa memblokir eksekusi program.
@@ -474,3 +474,197 @@ Callback executed
 -   setTimeout adalah fungsi asinkron sehingga callback tidak langsung dipanggil.
 -   console.log("After setTimeout") di eksekusi lebih dulu sebelum callback.
 -   Callback hanya berjalan setelah menunggu 2 detik sehingga ada jead eksekusi.
+
+❌ Callback Hell
+Callback Hell terjadi ketika kita membuat kode dengan nested callback yang menyebabkan kode sulit di baca dan sulit untuk penanganan error.
+
+Contoh: 
+```Javascript
+    function getUser(id, callback) {
+        setTimeout(() => {
+            console.log("User retrieved");
+            callback({ id: id, name: "John Doe", email: "john@example.com" });
+        }, 1000);
+    }
+
+    function getTransactions(userId, callback) {
+        setTimeout(() => {
+            console.log("Transactions retrieved");
+            callback([{ id: 101, amount: 5000 }, { id: 102, amount: 3000 }]);
+        }, 1000);
+    }
+
+    function getTransactionDetails(transactionId, callback) {
+        setTimeout(() => {
+            console.log("Transaction details retrieved");
+            callback({ id: transactionId, amount: 5000, date: "2025-02-10" });
+        }, 1000);
+    }
+
+    function sendEmail(email, details, callback) {
+        setTimeout(() => {
+            console.log(`Email sent to ${email} with details:`, details);
+            callback();
+        }, 1000);
+    }
+
+    // Callback Hell terjadi di sini
+    getUser(1, (user) => {
+        getTransactions(user.id, (transactions) => {
+            getTransactionDetails(transactions[0].id, (details) => {
+                sendEmail(user.email, details, () => {
+                    console.log("All processes completed!");
+                });
+            });
+        });
+    });
+```
+
+Contoh di atas menunjukan callback hell dalam operasi asynchronous ketika menjalankan beberapa operasi berurutan:
+1. Mengambil data pengguna dari database.
+2. Mengambil daftar transaksi pengguna.
+3. Mengambail detail transaksi tertentu.
+4. Mengirim email konfirmasi.
+
+Kode di atas sangat sulit di baca, bahkan jika ada sedikit saja perubahan alur itu akan membuat kode semakin berantakan. Salah satu alasan lahirnya fitur Promises, Async/Await adalah masalah ini.
+
+```Javascript
+    function getUser(id) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                console.log("User retrieved");
+                resolve({ id: id, name: "John Doe", email: "john@example.com" });
+            }, 1000);
+        });
+    }
+
+    function getTransactions(userId) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                console.log("Transactions retrieved");
+                resolve([{ id: 101, amount: 5000 }, { id: 102, amount: 3000 }]);
+            }, 1000);
+        });
+    }
+
+    function getTransactionDetails(transactionId) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                console.log("Transaction details retrieved");
+                resolve({ id: transactionId, amount: 5000, date: "2025-02-10" });
+            }, 1000);
+        });
+    }
+
+    function sendEmail(email, details) {
+        return new Promise((resolve) => {
+            setTimeout(() => {
+                console.log(`Email sent to ${email} with details:`, details);
+                resolve();
+            }, 1000);
+        });
+    }
+
+    async function processTransaction() {
+        try {
+            let user = await getUser(1);
+            let transactions = await getTransactions(user.id);
+            let details = await getTransactionDetails(transactions[0].id);
+            await sendEmail(user.email, details);
+            console.log("All processes completed!");
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+
+    processTransaction();
+```
+
+Dengan Async/Await mengatur hal semacam ini lebih mudah dan kode jadi lebih di baca.
+
+🔥Promises
+Promise adalah object di JavaScript yang merepresentasikan penyelesaian (berhasil atau gagal) dari suatau operasi asynchronous, serta nilai hasil dari operasi tersebut di masa depan. Dengan kata lain, ketika kita menjalankan operasi asinkron seperti mengambil data dari API atau membaca file, kita tidak bisa langsung mendapatkan hasilnya. Sebagai gantinya kita akan mendapatkan sebuah promise yang akan memberikan hasil nanti setelah operasi selesai.
+
+Promise bertindak sebagai proxy untuk suatu nilai uyang mungkin belum di ketahui saat promise di buat. Inin memungkinkan kita untuk menangani hasil dari operasi asinkron tanpa harus langsung memiliki hasilnya.
+
+Promises memiliki 3 status:
+1. Pending -> Awal status dari promise, belum selesai atau gagal.
+2. fulfilled -> Promise berhasil di selesaikan dengan suatu nilai.
+3. rejected -> Promise gagal dan mengembalikan alasan kegagalannya.
+
+Setelah Promise masuk ke status fulfilled atau rejected, maka disebut settled(telah selesai).
+
+Cara kerja Promise cukup simpel yaitu ketika proses telah fulfilled maka kode di dalam .then() akan di jalankan, sementara jika proses telah rejected maka kode dalam .catch() akan di jalankan.
+
+⚠️ Jika kode di dalam promise tidak memiliki .then() maka proses akan stuck di status pending.
+
+Kita bisa membuat Promise menggunakan new Promise((resolve, reject) => { ... }).
+```Javascript
+    const myPromise = new Promise((resolve, reject) => {
+        setTimeout(() => {
+            let success = true;
+            if (success) {
+                resolve("Data berhasil diambil!");
+            } else {
+                reject("Terjadi kesalahan saat mengambil data.");
+            }
+        }, 2000);
+    });
+```
+
+Kita bisa menangani hasil Promise dengan .then() untuk hasil sukses dan .catch() untuk kegagalan.
+```Javascript
+    myPromise
+        .then((result) => {
+            console.log("Berhasil:", result);
+        })
+        .catch((error) => {
+            console.error("Gagal:", error);
+        });
+```
+
+Menggunakan Promise dalam operasi asinkron untuk mengambil data pengguna berdasarkan userId.
+```Javascript
+    function getUser(userId) {
+        return new Promise((resolve, reject) => {
+            setTimeout(() => {
+                if (userId === 1) {
+                    resolve({ id: 1, name: "John Doe" });
+                } else {
+                    reject("User tidak ditemukan");
+                }
+            }, 1500);
+        });
+    }
+
+    // Menggunakan promise
+    getUser(1)
+        .then((user) => console.log("User ditemukan:", user))
+        .catch((error) => console.error(error));
+```
+
+Menggunakan Promise Chaining untuk menghindari callback Hell.
+```Javascript
+    getUser(1)
+        .then((user) => {
+            console.log("User ditemukan:", user);
+            return getUser(user.id); // Mengembalikan promise lain
+        })
+        .then((newUser) => console.log("User baru ditemukan:", newUser))
+        .catch((error) => console.error("Error:", error));
+```
+dengan menggunakan kode seperti ini, kita dapat menjalankan beberapa operasi berurutan dengan lebih rapi dibandingkan callback hell.
+
+Selain menggunakan .then() dan .catch(), kita bisa menggunakan async/await untuk menangani promise lebih sederhana.
+```Javascript
+    async function fetchUser() {
+        try {
+            let user = await getUser(1);
+            console.log("User ditemukan:", user);
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+
+    fetchUser();
+```
