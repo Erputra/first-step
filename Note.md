@@ -139,7 +139,7 @@ kita bisa menggunakan library seperti Express dengan cara menginjeksikan decorat
     findAll(@Res() response): void {
         response.status(200).send('This action returns all cats');
     }
-```
+``` 
 
 Meskipun menawarkan kontrol yang lebih dari respon standar, ini memiliki kelemahan karena jika kamu menggunakan @Res() maka NestJS akan menonaktifkan built-in reposne handling pada route dan kita harus mengatur hal tersebut secara keseluruhan dan secara manual.
 
@@ -325,7 +325,7 @@ Sama seperti rute pada umumnya, host dapa menggunakan token untuk mendapatkan da
         getInfo(@HostParam('account') account: string) {
             return account;
         }
-    }w
+    }
 ```
 #   Asyncronous
 Dalam bahasa Indonesia, asycronous memiliki arti "tidak sinkron". Sementara dalam pemrograman, asycncronous berarti bahawa ketika ada task yang membutuhkan waktu cukup lama untuk di proses, task tersebut tidak akan menghalangi task lain yang datang (non-blocking). Task yang berat akan di kirim atau di tangani di background task queue (event-loop) lalu di push kembali ke antrian utama setelah task selesai di proses.
@@ -667,4 +667,174 @@ Selain menggunakan .then() dan .catch(), kita bisa menggunakan async/await untuk
     }
 
     fetchUser();
+```
+
+Nah, di Nest sendiri juga bisa menggunakan async/await atau RxJS(Reactive Extensions for JavaScript), Kita coba dulu cara penggunaan async/await di nest.
+
+🔥 async/await
+
+```TypeScript
+    @Get()
+    async findAll(): Promise<any[]> {
+        return [];
+    }
+```
+
+Kode diatas menggunakan dekorasi Get sebagai penanda jika findAll harus di akses menggunakan HTTP Method Get, Kemudian fungsi findAll akan sebuah Promise yang berisi array dengan elemen bebas.
+Di TypeScript, any adalah tipe data fleksibel yang bisa digunakan untuk menyimpan nilai dari tipe apapun. Artinya, variabel atau fungsi dengan tipe any bisa berisi string, number, array, object atau tipe lainnya.
+
+Lalu kenapa kode diatas di tuliskan dengan Promise<any[]>?, Mari kita bedah!
+✅ Promise<T> ini artinya fungsi mengembalikan sebuah promise yang akan menghasilkan tipe T di masa depan. T adalah Tipe Generic dalam TypeScript yang berarti tipe data yang akan di kembalikan oleh Promise setelah operasi asinkron selesai.
+
+Contoh umum
+Promise<number>  // Akan mengembalikan angka di masa depan
+Promise<string>  // Akan mengembalikan string di masa depan
+Promise<boolean> // Akan mengembalikan boolean di masa depan
+Promise<User[]>  // Akan mengembalikan array berisi User di masa depan
+
+✅ any[] ini berarti Promise akan mengembalikan sebuah array berisi elemen dengan tipe bebas
+
+lalu kenapa harus return [] ?, ini terjadi karena fungsi findAll di deklarasikan bahwa akan mengembalikan sebuah array.
+
+Contoh yang lebih realistis:
+
+```TypeScript
+    @Get()
+    async findAllUser(): Promise<User[]> {
+        return this.userService.findAll(); // Tidak perlu await
+    }
+```
+Kenapa tidak perlu await?
+karena this.userService.findAll() sudah mengembalikan Promise, NestJS akan menunggu penyelesaian Promise secara otomatis sebelum mengirimkan respons.
+
+Lalu kapan await di perlukan?
+Biasanya dia diperlukan jika kita ingin melakukan manipulasi data sebelum di teruskan ke response, Contoh:
+
+```TypeScript
+    @Get()
+    async findAll(): Promise<string[]> {
+        const users = await this.userService.findAll();
+        return users.map(user => user.name); // Modifikasi hasil sebelum dikembalikan
+    }
+```
+
+🔥 RxJS(Reactive Extensions for JavaScript)
+
+Ini adalah salah satu fitur dari NestJS, RxJS ini lebih ditujukan untuk keperluan stream atau dalam situasi yang dimana data harus terus mengalir secara terus-menerus dan bahkan untuk mengelola operasi asinkron yang kompleks, Contoh:
+✅ Websocket / Real-time Data => Mengelola koneksi yang terus menerus menerima data.
+✅ Event-based System => Menerima event dari kafka, RabbitMQ atau Pub/Sub.
+✅ HTTP Request Chaining => Jika beberapa request harus di jalankan secara berurutan atau paralel.
+✅ Debounce & Throttle => Menunda atau membatasi eksekusi event (seperti pencarian live di frontend).
+✅ Polling Data => Jika perlu mengambil data secara periodik dari API external.
+
+Lalu apa arti dari stream itu sendiri?
+Stream adalah aliran data yang bisa diterima secara bertahap atau berkelanjutan, bukan hanya sekali.
+
+💡 Perbedaan dengan Promise
+    📌  Promise hanya menangani satu nilai sekali saja.
+    📌  Stream (Observable) bisa menangani banyak nilai seiring waktu.
+
+Contoh:
+
+```TypeScript
+import { Controller, Get } from '@nestjs/common';
+import { Observable, interval, map } from 'rxjs';
+
+@Controller('users')
+export class UsersController {
+  @Get()
+  findAll(): Observable<string> {
+    return interval(1000).pipe( // Emit data setiap 1 detik
+      map((i) => `User ${i}`)   // Ubah angka menjadi string user
+    );
+  }
+}
+```
+
+mari kita bedah.
+✅ Observable adalah aliran data yang bisa di pantai (subscribe).
+✅ Observable<string> berarti setiap data yang di kirim adalah string.
+✅ interval(1000) → Menghasilkan angka setiap detik.
+✅ .pipe(map(...)) → Mengubah angka menjadi "User X".
+
+
+#   Request Payload
+Cara menangani data yang dikirim oleh kilen (request body) dengan menggunakan DTO (Data Transfer Object) dan decorator @Body().
+Penggunaan DTO menawarkan beberapa keuntungan yaitu: Struktur data sesuai dengan yang di harapkan, Tidak ada properti tambahan yang dikirim oleh klien yang bisa berpotensi bahaya, Dan data bisa di validasi sebelum di gunakan.
+
+Contoh DTO
+
+```TypeScript
+    export class CreateCatDto {
+        name: string;
+        age: number;
+        breed: string;
+    }
+```
+Kode diatas adalah contoh dasar DTO, NestJS sendiri lebih menyarankan penggunakan class daripada interafce karena:
+✅ Class tetap ada saat runtime, sedangkan interface hanya ada di TypeScript dan hilang setelah transpile ke JavaScript.
+✅ Beberapa fitur Pipes hanya bisa bekerja dengan class.
+
+Cara menerima data dengan DTO:
+
+```TypeScript
+    import { Controller, Post, Body } from '@nestjs/common';
+    import { CreateCatDto } from './create-cat.dto';
+
+    @Controller('cats')
+    export class CatsController {
+        @Post()
+        async create(@Body() createCatDto: CreateCatDto) {
+            return `Received cat data: ${createCatDto.name}, ${createCatDto.age}, ${createCatDto.breed}`;
+        }
+    }
+```
+Jadi data dari @Body() akan di transform ke CreateCatDto, kemudian kita bisa menggunakan melalui propertinya.
+
+Lalu bagaimana jika data yang dikirim lebih banyak misal ada tambahan properti color dari klien?
+Untuk menangani hal tersebut, kita bisa mengaktifkan ValidationPipe secara global sehingga hanya properti yang sesuai dengan DTO yang akan di proses, sementara yang lain akan di abaikan.
+
+untuk mengaktifkannya bisa menggunakan ValidationPipe dari @nestjs/common. Setelah itu gunakan pada instance app
+
+```TypeScript
+import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  await app.listen(3000);
+}
+bootstrap();
+```
+
+Jika ingin lebih aman lagi, bisa menambahkan validasi dengan class-validator. `npm install class-validator class-transformer` jalankan perintah tersebut kemudian perbarui DTO.
+
+```TypeScript
+import { IsString, IsInt, Min, Max, IsNotEmpty } from 'class-validator';
+
+export class CreateCatDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsInt()
+  @Min(0)
+  @Max(30)
+  age: number;
+
+  @IsString()
+  @IsNotEmpty()
+  breed: string;
+}
+```
+
+Dengan tambahan dekorator tiap properti, ini secara otomatis akan memvalidasi data sesuai dengan dekorator sebelum di proses. Misal ada request datang, namun properti name tidak di sertakan maka program akan merespon:
+```TypeScript
+    {
+    "statusCode": 400,
+    "message": ["breed should not be empty"],
+    "error": "Bad Request"
+    }
 ```
